@@ -1,0 +1,2 @@
+class Merchant < User
+end
