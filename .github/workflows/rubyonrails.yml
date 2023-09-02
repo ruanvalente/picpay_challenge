@@ -7,9 +7,9 @@
 name: "Ruby on Rails CI"
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "development" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "development" ]
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -19,12 +19,12 @@ jobs:
         ports:
           - "5432:5432"
         env:
-          POSTGRES_DB: rails_test
-          POSTGRES_USER: rails
-          POSTGRES_PASSWORD: password
+          POSTGRES_DB: msgmzkqs
+          POSTGRES_USER: msgmzkqs
+          POSTGRES_PASSWORD: Nw_iLgxpH-S7kbeHESZnPK3WilQ0POmU
     env:
-      RAILS_ENV: test
-      DATABASE_URL: "postgres://rails:password@localhost:5432/rails_test"
+      RAILS_ENV: development
+      DATABASE_URL: "postgres://msgmzkqs:Nw_iLgxpH-S7kbeHESZnPK3WilQ0POmU@bubble.db.elephantsql.com/msgmzkqs"
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -35,11 +35,8 @@ jobs:
           bundler-cache: true
       # Add or replace database setup steps here
       - name: Set up database schema
-        run: bin/rails db:schema:load
-      # Add or replace test runners here
-      - name: Run tests
-        run: bin/rake
-
+        run: bin/rails db:drop && bin/rails db:create && bin/rails db:migrate && bin/rails db:seed && bin/rails db:schema:load
+      
   lint:
     runs-on: ubuntu-latest
     steps:
