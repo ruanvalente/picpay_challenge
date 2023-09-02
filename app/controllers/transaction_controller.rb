@@ -12,27 +12,55 @@ class TransactionController < ApplicationController
       render_user_not_found_error
     elsif sender.instance_of?(Merchant)
       render json: { message: 'Merchants cannot send money' }, status: :unprocessable_entity
-    elsif sender.balance >= amount && AuthorizationService.authorize_transaction
+    elsif sufficient_balance?(sender, amount) && authorize_transaction_successful?
       create_transaction(sender, receiver, amount)
     else
-      render json: { message: 'Insufficient balance or authorization failed' }, status: :unprocessable_entity
+      render_transaction_error_message(sender, amount)
     end
   end
 
   private
 
+  def sufficient_balance?(sender, amount)
+    sender.balance >= amount
+  end
+
+  def authorize_transaction_successful?
+    AuthorizationService.authorize_transaction
+  end
+
   def create_transaction(sender, receiver, amount)
-    transaction = Transaction.new(sender:, receiver:, amount:, status: 'completed')
-    if transaction.save
+    transaction = nil
+    ActiveRecord::Base.transaction do
+      transaction = Transaction.create(sender:, receiver:, amount:, status: 'completed')
       sender.update(balance: sender.balance - amount)
       receiver.update(balance: receiver.balance + amount)
-      render json: { message: 'Transaction was successful' }, status: :created
+    end
+  
+    if transaction
+      render_transaction_success_message
       NotificationService.notification_message('Transaction was successful', transaction)
     else
-      render json: { message: 'Transaction failed' }, status: :unprocessable_entity
+      render_transaction_error_message(sender, amount)
     end
   end
-  
+
+  def render_transaction_success_message
+    render json: { message: 'Transaction was successful' }, status: :created
+  end
+
+  def render_transaction_error_message(sender, amount)
+    render json: { message: transaction_error_message(sender, amount) }, status: :unprocessable_entity
+  end
+
+  def transaction_error_message(sender, amount)
+    if !sufficient_balance?(sender, amount)
+      'Insufficient balance'
+    else
+      'Transaction is not authorized'
+    end
+  end
+
   def find_user(user_id)
     User.find_by(id: user_id)
   end
