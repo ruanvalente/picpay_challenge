@@ -16,7 +16,7 @@ jobs:
     - name: Configurar Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 3.x # Altere para a versão Ruby que você está usando
+        ruby-version: 3.1.4
 
     - name: Instalar dependências
       run: |
@@ -29,3 +29,5 @@ jobs:
         bundle exec rails db:create
         bundle exec rails db:migrate
         bundle exec rails db:seed
+      env:
+        RAILS_ENV: development
