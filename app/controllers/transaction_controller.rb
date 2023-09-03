@@ -15,7 +15,14 @@ class TransactionController < ApplicationController
     elsif sufficient_balance?(sender, amount) && authorize_transaction_successful?
       create_transaction(sender, receiver, amount)
     else
-      render_transaction_error_message(sender, amount)
+      status_response = if sufficient_balance?(sender,
+                                               amount) && !authorize_transaction_successful?
+                          :unauthorized
+                        else
+                          :unprocessable_entity
+                        end
+      puts "STATUS RESPONSE: #{status_response}"
+      render_transaction_error_message(sender, amount, status_response)
     end
   end
 
@@ -29,28 +36,31 @@ class TransactionController < ApplicationController
     AuthorizationService.authorize_transaction
   end
 
-  def create_transaction(sender, receiver, amount)
+  def create_transaction(
+    sender,
+    receiver,
+    amount
+  )
     transaction = nil
     ActiveRecord::Base.transaction do
       transaction = Transaction.create(sender:, receiver:, amount:, status: 'completed')
       sender.update(balance: sender.balance - amount)
       receiver.update(balance: receiver.balance + amount)
     end
-  
-    if transaction
-      render_transaction_success_message
-      NotificationService.notification_message('Transaction was successful', transaction)
-    else
-      render_transaction_error_message(sender, amount)
-    end
+
+    return unless transaction
+
+    render_transaction_success_message
+    NotificationService.notification_message('Transaction was successful', transaction)
   end
 
   def render_transaction_success_message
     render json: { message: 'Transaction was successful' }, status: :created
   end
 
-  def render_transaction_error_message(sender, amount)
-    render json: { message: transaction_error_message(sender, amount) }, status: :unprocessable_entity
+  def render_transaction_error_message(sender, amount, status)
+    puts "STATUS: #{status}"
+    render json: { message: transaction_error_message(sender, amount) }, status:
   end
 
   def transaction_error_message(sender, amount)
