@@ -12,14 +12,6 @@ class TransactionControllerTest < ActionController::TestCase
                                   email: 'merchant@example.com')
   end
 
-  test 'should create a transaction with valid parameters' do
-    Transaction.destroy_all
-    post :create, params: { sender_id: @sender.id, receiver_id: @receiver.id, amount: 10 }
-    expected_response = '{"message":"Transaction was successful"}'
-    assert_response expected_response.include?(response.body) ? :created : :unauthorized
-    assert_equal expected_response.include?(response.body) ? 1 : 0, Transaction.count
-  end
-
   test 'create renders Transaction was successful message' do
     Transaction.destroy_all
 
