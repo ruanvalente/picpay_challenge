@@ -21,7 +21,6 @@ class TransactionController < ApplicationController
                         else
                           :unprocessable_entity
                         end
-      puts "STATUS RESPONSE: #{status_response}"
       render_transaction_error_message(sender, amount, status_response)
     end
   end
@@ -59,7 +58,6 @@ class TransactionController < ApplicationController
   end
 
   def render_transaction_error_message(sender, amount, status)
-    puts "STATUS: #{status}"
     render json: { message: transaction_error_message(sender, amount) }, status:
   end
 
