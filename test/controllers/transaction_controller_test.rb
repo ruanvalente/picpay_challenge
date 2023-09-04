@@ -20,6 +20,23 @@ class TransactionControllerTest < ActionController::TestCase
     assert_equal expected_response.include?(response.body) ? 1 : 0, Transaction.count
   end
 
+  test 'create renders Transaction was successful message' do
+    Transaction.destroy_all
+
+    def AuthorizationService.authorize_transaction
+      true
+    end
+
+    if AuthorizationService.authorize_transaction
+      post :create, params: { sender_id: @sender.id, receiver_id: @receiver.id, amount: 20 }
+
+      assert_response :created
+      expected_response = '{"message":"Transaction was successful"}'
+      assert_equal expected_response, response.body
+      assert_equal 1, Transaction.count
+    end
+  end
+
   test 'is not allowed to create a transaction with user type merchant' do
     Transaction.destroy_all
     post :create, params: { sender_id: @merchant.id, receiver_id: @receiver.id, amount: 10 }
@@ -30,18 +47,9 @@ class TransactionControllerTest < ActionController::TestCase
     assert_equal 0, Transaction.count
   end
 
-  test 'it is not allowed to create a transaction if the balance amount is greater than the one sent.' do
-    Transaction.destroy_all
-    post :create, params: { sender_id: @sender.id, receiver_id: @receiver.id, amount: 2000 }
-    expected_response = '{"message":"Insufficient balance"}'
-
-    assert_response :unprocessable_entity
-    assert_equal expected_response, response.body
-    assert_equal 0, Transaction.count
-  end
-
   test 'it is not allowed to create a transaction if the user not found' do
     Transaction.destroy_all
+
     post :create, params: { sender_id: @sender.id, receiver_id: 32, amount: 10 }
     expected_response = '{"message":"User not found"}'
 
@@ -50,13 +58,29 @@ class TransactionControllerTest < ActionController::TestCase
     assert_equal 0, Transaction.count
   end
 
-  test 'it is not allowed to create a transaction if the user not unauthorized' do
+  test 'create renders Insufficient balance error' do
     Transaction.destroy_all
-    post :create, params: { sender_id: @sender.id, receiver_id: @receiver.id, amount: 10 }
-    expected_response = '{"message":"Transaction is not authorized"}'
 
-    if response.body.include?(expected_response)
+    post :create, params: { sender_id: @sender.id, receiver_id: @receiver.id, amount: 20_000 }
+
+    assert_response :unprocessable_entity
+    expected_response = '{"message":"Insufficient balance"}'
+    assert_equal expected_response, response.body
+    assert_equal 0, Transaction.count
+  end
+
+  test 'create renders Transaction is not authorized error when authorization fails' do
+    Transaction.destroy_all
+
+    def AuthorizationService.authorize_transaction
+      false
+    end
+
+    unless AuthorizationService.authorize_transaction
+      post :create, params: { sender_id: @sender.id, receiver_id: @receiver.id, amount: 20 }
+
       assert_response :unauthorized
+      expected_response = '{"message":"Transaction is not authorized"}'
       assert_equal expected_response, response.body
       assert_equal 0, Transaction.count
     end
